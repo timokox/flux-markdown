@@ -1116,9 +1116,19 @@ document.addEventListener('keydown', (e: KeyboardEvent) => {
 document.addEventListener('wheel', (e: WheelEvent) => {
     if (e.ctrlKey) {
         e.preventDefault();
-        window.scrollBy(e.deltaX, e.deltaY);
+        const delta = -e.deltaY * 0.01;
+        (window as any).webkit?.messageHandlers?.pinchZoom?.postMessage(delta);
     }
 }, { passive: false });
+
+(['gesturestart', 'gesturechange', 'gestureend'] as const).forEach(type => {
+    document.addEventListener(type as string, (e: Event) => {
+        e.preventDefault();
+        const phase = type === 'gesturestart' ? 'start' : type === 'gesturechange' ? 'change' : 'end';
+        const scale = (e as any).scale ?? 1.0;
+        (window as any).webkit?.messageHandlers?.gestureZoom?.postMessage({ phase, scale });
+    }, { passive: false });
+});
 
 window.setFontSize = function(px: number) {
     const outputDiv = document.getElementById('markdown-preview');

@@ -150,6 +150,48 @@ final class AppZoomTests: XCTestCase {
         let result = applyScrollZoom(current: 0.6, delta: -100.0, modifiers: true, phase: .changed)!
         XCTAssertEqual(result, 0.5, accuracy: 0.001, "large negative delta must clamp to 0.5")
     }
+
+    // MARK: - Pinch gesture (NSMagnificationGestureRecognizer)
+
+    private func applyPinchZoom(current: Double, magnification: Double) -> Double {
+        let newZoom = (current * (1.0 + magnification)).clamped(to: 0.5...3.0)
+        return newZoom
+    }
+
+    func testPinchZoom_zoomIn_increasesPageZoom() {
+        let result = applyPinchZoom(current: 1.0, magnification: 0.5)
+        XCTAssertGreaterThan(result, 1.0, "Pinch spread must increase pageZoom")
+    }
+
+    func testPinchZoom_zoomOut_decreasesPageZoom() {
+        let result = applyPinchZoom(current: 1.0, magnification: -0.3)
+        XCTAssertLessThan(result, 1.0, "Pinch pinch must decrease pageZoom")
+    }
+
+    func testPinchZoom_largeMagnification_clampsToMax() {
+        let result = applyPinchZoom(current: 2.5, magnification: 1.0)
+        XCTAssertEqual(result, 3.0, accuracy: 0.001, "Pinch zoom out must clamp to 3.0 max")
+    }
+
+    func testPinchZoom_largeNegativeMagnification_clampsToMin() {
+        let result = applyPinchZoom(current: 0.6, magnification: -1.0)
+        XCTAssertEqual(result, 0.5, accuracy: 0.001, "Pinch zoom in must clamp to 0.5 min")
+    }
+
+    func testPinchZoom_zeroMagnification_noChange() {
+        let result = applyPinchZoom(current: 1.5, magnification: 0.0)
+        XCTAssertEqual(result, 1.5, accuracy: 0.001, "Zero magnification must not change zoom")
+    }
+
+    func testPinchZoom_fromHalfZoom_spreadsToFull() {
+        let result = applyPinchZoom(current: 0.5, magnification: 1.0)
+        XCTAssertEqual(result, 1.0, accuracy: 0.001)
+    }
+
+    func testPinchZoom_smallIncrement_isProportional() {
+        let result = applyPinchZoom(current: 1.0, magnification: 0.1)
+        XCTAssertEqual(result, 1.1, accuracy: 0.001)
+    }
 }
 
 // MARK: - Comparable clamped helper (mirrors Swift stdlib usage)

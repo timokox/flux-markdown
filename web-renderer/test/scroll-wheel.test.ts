@@ -5,82 +5,48 @@ jest.mock('mermaid', () => ({
 
 import '../src/index';
 
-describe('wheel event scroll-fix (issue #21)', () => {
+describe('wheel event handling', () => {
   beforeEach(() => {
     document.body.innerHTML = '<div id="markdown-preview"></div>';
-    Object.defineProperty(window, 'scrollY', { value: 0, writable: true, configurable: true });
   });
 
   test('normal wheel event (ctrlKey=false) is NOT intercepted', () => {
-    const scrollBySpy = jest.spyOn(window, 'scrollBy').mockImplementation(() => {});
-
-    const event = new WheelEvent('wheel', {
-      ctrlKey: false,
-      deltaY: 100,
-      cancelable: true,
-      bubbles: true,
-    });
+    const event = new WheelEvent('wheel', { ctrlKey: false, deltaY: 100, cancelable: true, bubbles: true });
     const preventDefaultSpy = jest.spyOn(event, 'preventDefault');
 
     document.dispatchEvent(event);
 
     expect(preventDefaultSpy).not.toHaveBeenCalled();
-    expect(scrollBySpy).not.toHaveBeenCalled();
-
-    scrollBySpy.mockRestore();
   });
 
-  test('wheel event with ctrlKey=true calls scrollBy instead of zooming', () => {
-    const scrollBySpy = jest.spyOn(window, 'scrollBy').mockImplementation(() => {});
-
-    const event = new WheelEvent('wheel', {
-      ctrlKey: true,
-      deltaY: 50,
-      cancelable: true,
-      bubbles: true,
-    });
+  test('ctrlKey+wheel calls preventDefault (blocks system zoom UI)', () => {
+    const event = new WheelEvent('wheel', { ctrlKey: true, deltaY: 100, cancelable: true, bubbles: true });
     const preventDefaultSpy = jest.spyOn(event, 'preventDefault');
 
     document.dispatchEvent(event);
 
     expect(preventDefaultSpy).toHaveBeenCalled();
-    expect(scrollBySpy).toHaveBeenCalledWith(0, 50);
-
-    scrollBySpy.mockRestore();
   });
 
-  test('wheel event with ctrlKey=true and negative deltaY scrolls up', () => {
-    const scrollBySpy = jest.spyOn(window, 'scrollBy').mockImplementation(() => {});
+  test('ctrlKey+wheel posts to pinchZoom messageHandler (trackpad pinch path)', () => {
+    const pinchZoomSpy = jest.fn();
+    (window as any).webkit = { messageHandlers: { pinchZoom: { postMessage: pinchZoomSpy } } };
 
-    const event = new WheelEvent('wheel', {
-      ctrlKey: true,
-      deltaY: -80,
-      cancelable: true,
-      bubbles: true,
-    });
-
+    const event = new WheelEvent('wheel', { ctrlKey: true, deltaY: -100, cancelable: true, bubbles: true });
     document.dispatchEvent(event);
 
-    expect(scrollBySpy).toHaveBeenCalledWith(0, -80);
+    expect(pinchZoomSpy).toHaveBeenCalledTimes(1);
 
-    scrollBySpy.mockRestore();
+    delete (window as any).webkit;
   });
 
-  test('wheel event with ctrlKey=true also passes deltaX for horizontal scroll', () => {
+  test('ctrlKey+wheel does NOT call scrollBy', () => {
     const scrollBySpy = jest.spyOn(window, 'scrollBy').mockImplementation(() => {});
 
-    const event = new WheelEvent('wheel', {
-      ctrlKey: true,
-      deltaX: 30,
-      deltaY: 0,
-      cancelable: true,
-      bubbles: true,
-    });
-
+    const event = new WheelEvent('wheel', { ctrlKey: true, deltaY: 100, cancelable: true, bubbles: true });
     document.dispatchEvent(event);
 
-    expect(scrollBySpy).toHaveBeenCalledWith(30, 0);
-
+    expect(scrollBySpy).not.toHaveBeenCalled();
     scrollBySpy.mockRestore();
   });
 });

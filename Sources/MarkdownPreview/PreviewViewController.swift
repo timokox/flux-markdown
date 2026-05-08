@@ -8,7 +8,7 @@ import SwiftUI
 // to the QuickLook host, which would otherwise trigger "Open with default app".
 class InteractiveWebView: WKWebView {
     private let logger = OSLog(subsystem: "com.markdownquicklook.app", category: "InteractiveWebView")
-    
+
     override func mouseDown(with event: NSEvent) {
         super.mouseDown(with: event)
         let result = self.window?.makeFirstResponder(self)
@@ -54,6 +54,15 @@ class InteractiveWebView: WKWebView {
         }
         super.scrollWheel(with: event)
     }
+
+    // Two-finger double-tap on trackpad fires NSEvent.EventType.smartMagnify.
+    // allowsMagnification=false does not suppress this event; we use it to reset zoom.
+    override func smartMagnify(with event: NSEvent) {
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.25
+            self.animator().magnification = 1.0
+        }
+    }
 }
 
 enum ViewMode {
@@ -72,6 +81,7 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
     var currentZoomLevel: Double = 1.0
     var currentViewMode: ViewMode = .preview
     var localSchemeHandler: LocalSchemeHandler?
+    private var gestureMagnificationBase: CGFloat = 1.0
 
     private var securityScopedURL: URL?
     private var isSecurityScopedAccessActive: Bool = false
@@ -319,6 +329,8 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         let userContentController = WKUserContentController()
         userContentController.add(self, name: "logger")
         userContentController.add(self, name: "linkClicked")
+        userContentController.add(self, name: "gestureZoom")
+        userContentController.add(self, name: "pinchZoom")
         webConfiguration.userContentController = userContentController
         
         let schemeHandler = LocalSchemeHandler()
@@ -364,7 +376,7 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         doubleClickGesture.delaysPrimaryMouseButtonEvents = false
         webView.addGestureRecognizer(doubleClickGesture)
         
-        webView.allowsMagnification = true
+        webView.allowsMagnification = false  // Pinch zoom goes via JS ctrlKey+wheel → pinchZoom bridge → setMagnification
         // Zoom is session-only; always start at 1.0 (Bug 2 fix)
         webView.pageZoom = 1.0
         
@@ -487,8 +499,10 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         webView.navigationDelegate = nil
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "logger")
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "linkClicked")
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "gestureZoom")
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "pinchZoom")
         
-        for recognizer in webView.gestureRecognizers {
+        for recognizer in webView.gestureRecognizers where recognizer is NSClickGestureRecognizer {
             webView.removeGestureRecognizer(recognizer)
         }
         
@@ -1309,6 +1323,24 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         } else if message.name == "linkClicked", let href = message.body as? String {
             os_log("🔵 Link clicked from JS: %{public}@", log: logger, type: .default, href)
             handleLinkClick(href: href)
+        } else if message.name == "pinchZoom", let delta = message.body as? Double {
+            let newMag = min(5.0, max(0.25, webView.magnification * (1.0 + delta)))
+            webView.setMagnification(newMag, centeredAt: .zero)
+            os_log("🔵 pinchZoom magnification: %.2f (delta=%.3f)", log: logger, type: .debug, newMag, delta)
+        } else if message.name == "gestureZoom",
+                  let body = message.body as? [String: Any],
+                  let phase = body["phase"] as? String,
+                  let scale = body["scale"] as? Double {
+            switch phase {
+            case "start":
+                gestureMagnificationBase = webView.magnification
+            case "change", "end":
+                let newMag = min(5.0, max(0.25, gestureMagnificationBase * CGFloat(scale)))
+                webView.setMagnification(newMag, centeredAt: .zero)
+                os_log("🔵 gestureZoom phase=%{public}@ mag=%.2f", log: logger, type: .debug, phase, newMag)
+            default:
+                break
+            }
         }
     }
     

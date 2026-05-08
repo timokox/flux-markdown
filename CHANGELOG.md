@@ -1,5 +1,13 @@
 ## [Unreleased]
-_无待发布的变更_
+
+### Added
+- **Two-Finger Pinch Zoom (Visual Scale)**: Double-finger pinch/spread on trackpad now performs smooth visual magnification (0.25× to 5.0×) via `WKWebView.setMagnification()` — scales entire page content without reflow, similar to photo zoom in Photos.app.
+- **Two-Finger Double-Tap Reset**: Two-finger double-tap on trackpad (macOS `smartMagnify` event) instantly resets visual magnification to 100% with smooth 0.25s animation.
+
+### Changed
+- **Cmd+Scroll Zoom (Throttled)**: Cmd+scroll now uses smooth, zero-frame-drop text reflow zoom via `pageZoom`. User perceives zero lag during gesture (real-time snap to 0.05 steps) with exact final value committed at gesture end. Range: 0.5× to 3.0×.
+  - Previous version: simple `pageZoom += 0.05` per scroll without accumulation or snapping → stuttering UX with drift on momentum scrolls.
+  - Fix: Accumulate scroll deltas, snap to 0.05-step grid during gesture, commit exact final zoom only at phase `.ended` with momentum events filtered out.
 
 ## [1.31.402] - 2026-04-29
 

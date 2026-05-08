@@ -39,6 +39,8 @@ struct MarkdownWebView: NSViewRepresentable {
         let userContentController = WKUserContentController()
         userContentController.add(coordinator, name: "logger")
         userContentController.add(coordinator, name: "linkClicked")
+        userContentController.add(coordinator, name: "gestureZoom")
+        userContentController.add(coordinator, name: "pinchZoom")
         
         let debugSource = """
         window.onerror = function(msg, url, line, col, error) {
@@ -114,6 +116,7 @@ struct MarkdownWebView: NSViewRepresentable {
         weak var currentWebView: WKWebView?
         var currentFileURL: URL?
         var pendingAnchor: String?
+        private var gestureMagnificationBase: CGFloat = 1.0
 
         // File monitoring
         private var fileMonitor: DispatchSourceFileSystemObject?
@@ -531,6 +534,27 @@ struct MarkdownWebView: NSViewRepresentable {
             } else if message.name == "linkClicked", let href = message.body as? String {
                 os_log("🔵 Link clicked from JS: %{public}@", log: logger, type: .default, href)
                 handleLinkClick(href: href)
+            } else if message.name == "pinchZoom",
+                      let delta = message.body as? Double,
+                      let webView = message.webView {
+                let newMag = min(5.0, max(0.25, webView.magnification * (1.0 + delta)))
+                webView.setMagnification(newMag, centeredAt: .zero)
+                os_log("🔵 pinchZoom magnification: %.2f (delta=%.3f)", log: logger, type: .debug, newMag, delta)
+            } else if message.name == "gestureZoom",
+                      let body = message.body as? [String: Any],
+                      let phase = body["phase"] as? String,
+                      let scale = body["scale"] as? Double,
+                      let webView = message.webView {
+                switch phase {
+                case "start":
+                    gestureMagnificationBase = webView.magnification
+                case "change", "end":
+                    let newMag = min(5.0, max(0.25, gestureMagnificationBase * CGFloat(scale)))
+                    webView.setMagnification(newMag, centeredAt: .zero)
+                    os_log("🔵 gestureZoom phase=%{public}@ mag=%.2f", log: logger, type: .debug, phase, newMag)
+                default:
+                    break
+                }
             }
         }
         
@@ -815,6 +839,8 @@ class ResizableWKWebView: WKWebView {
 
     private var hasSetInitialSize = false
     private let logger = OSLog(subsystem: "com.markdownquicklook.app", category: "ResizableWKWebView")
+    private var cmdScrollAccumulator: CGFloat = 0
+    private var cmdScrollBaseZoom: CGFloat = 1.0
     
     override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
         super.willOpenMenu(menu, with: event)
@@ -836,29 +862,54 @@ class ResizableWKWebView: WKWebView {
     }
     
     override func scrollWheel(with event: NSEvent) {
-        if event.modifierFlags.contains(.command) {
-            // Bug 4 fix: ignore inertia-only phases and momentum scroll events
-            let phase = event.phase
-            if phase == .mayBegin || phase == .cancelled {
-                super.scrollWheel(with: event)
-                return
-            }
-            if event.momentumPhase != [] {
-                super.scrollWheel(with: event)
-                return
-            }
-            let delta = event.scrollingDeltaY
-            guard abs(delta) > 0.1 else {
-                super.scrollWheel(with: event)
-                return
-            }
-            // Bug 6 fix: use pageZoom (text reflow) instead of magnification (visual-only scale)
-            let newZoom = min(3.0, max(0.5, self.pageZoom + delta * 0.01))
-            self.pageZoom = newZoom
-            os_log("🔵 Cmd+scroll pageZoom: %.2f", log: logger, type: .debug, newZoom)
+        guard event.modifierFlags.contains(.command) else {
+            super.scrollWheel(with: event)
             return
         }
-        super.scrollWheel(with: event)
+
+        let phase = event.phase
+        if phase == .mayBegin || phase == .cancelled {
+            super.scrollWheel(with: event)
+            return
+        }
+        if event.momentumPhase != [] {
+            return
+        }
+
+        let delta = event.scrollingDeltaY
+        guard abs(delta) > 0.1 else { return }
+
+        if phase == .began {
+            cmdScrollAccumulator = 0
+            cmdScrollBaseZoom = self.pageZoom
+        }
+
+        cmdScrollAccumulator += delta
+
+        let step: CGFloat = 0.05
+        let rawTarget = cmdScrollBaseZoom + cmdScrollAccumulator * 0.01
+        let clamped = min(3.0, max(0.5, rawTarget))
+        let snapped = (clamped / step).rounded() * step
+
+        if abs(snapped - self.pageZoom) >= step * 0.9 {
+            self.pageZoom = snapped
+        }
+
+        if phase == .ended {
+            let final = min(3.0, max(0.5, cmdScrollBaseZoom + cmdScrollAccumulator * 0.01))
+            self.pageZoom = final
+            os_log("🔵 Cmd+scroll pageZoom committed: %.2f", log: logger, type: .debug, final)
+        }
+    }
+
+    // Two-finger double-tap on trackpad fires NSEvent.EventType.smartMagnify.
+    // We reset visual magnification to 1.0 with animation (same UX as Photos.app).
+    override func smartMagnify(with event: NSEvent) {
+        NSAnimationContext.runAnimationGroup { ctx in
+            ctx.duration = 0.25
+            self.animator().magnification = 1.0
+        }
+        os_log("🔵 smartMagnify → reset magnification to 1.0", log: logger, type: .debug)
     }
 
     override func viewDidMoveToWindow() {
@@ -892,8 +943,8 @@ class ResizableWKWebView: WKWebView {
             }
         }
         hasSetInitialSize = true
-        
-        self.allowsMagnification = true
+
+        self.allowsMagnification = false  // Pinch zoom goes via JS ctrlKey+wheel → pinchZoom bridge → setMagnification
         self.pageZoom = 1.0   // Bug 2 fix: zoom is session-only, always start at 1.0
     }
 }
