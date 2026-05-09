@@ -14,7 +14,7 @@ struct MarkdownWebView: NSViewRepresentable {
     var fileURL: URL?
     var appearanceMode: AppearanceMode = .light
     var viewMode: ViewMode = .preview
-    var baseFontSize: Double = 16
+    var baseFontSize: Double = 14
     var enableMermaid: Bool = true
     var enableKatex: Bool = true
     var enableEmoji: Bool = true
@@ -35,7 +35,7 @@ struct MarkdownWebView: NSViewRepresentable {
         
         let webConfiguration = WKWebViewConfiguration()
         webConfiguration.processPool = WKProcessPool()
-        webConfiguration.websiteDataStore = .nonPersistent()
+        webConfiguration.websiteDataStore = .default()
         let userContentController = WKUserContentController()
         userContentController.add(coordinator, name: "logger")
         userContentController.add(coordinator, name: "linkClicked")
@@ -221,18 +221,21 @@ struct MarkdownWebView: NSViewRepresentable {
             guard let webView = currentWebView,
                   webView.window?.isKeyWindow == true else { return }
             webView.pageZoom = min(3.0, webView.pageZoom + 0.1)
+            AppearancePreference.shared.zoomLevel = webView.pageZoom
         }
 
         @objc func handleZoomOut() {
             guard let webView = currentWebView,
                   webView.window?.isKeyWindow == true else { return }
             webView.pageZoom = max(0.5, webView.pageZoom - 0.1)
+            AppearancePreference.shared.zoomLevel = webView.pageZoom
         }
 
         @objc func handleResetZoom() {
             guard let webView = currentWebView,
                   webView.window?.isKeyWindow == true else { return }
             webView.pageZoom = 1.0
+            AppearancePreference.shared.zoomLevel = 1.0
             os_log("🔵 pageZoom reset to 1.0", log: logger, type: .debug)
         }
 
@@ -323,7 +326,7 @@ struct MarkdownWebView: NSViewRepresentable {
             if fileURL != currentFileURL {
                 currentFileURL = fileURL
                 startFileMonitoring()
-                webView.pageZoom = 1.0
+                webView.pageZoom = AppearancePreference.shared.zoomLevel
             }
 
             if let url = fileURL {
@@ -523,8 +526,8 @@ struct MarkdownWebView: NSViewRepresentable {
                         if !hasAppliedInitialZoomReset {
                             hasAppliedInitialZoomReset = true
                             if let webView = message.webView {
-                                webView.pageZoom = 1.0
-                                os_log("🔵 Initial pageZoom reset to 1.0 at rendererReady", log: logger, type: .debug)
+                                webView.pageZoom = AppearancePreference.shared.zoomLevel
+                                os_log("🔵 Initial pageZoom restored to %.2f at rendererReady", log: logger, type: .debug, webView.pageZoom)
                             }
                         }
                         pendingRender?()
@@ -898,6 +901,7 @@ class ResizableWKWebView: WKWebView {
         if phase == .ended {
             let final = min(3.0, max(0.5, cmdScrollBaseZoom + cmdScrollAccumulator * 0.01))
             self.pageZoom = final
+            AppearancePreference.shared.zoomLevel = final
             os_log("🔵 Cmd+scroll pageZoom committed: %.2f", log: logger, type: .debug, final)
         }
     }
@@ -945,7 +949,7 @@ class ResizableWKWebView: WKWebView {
         hasSetInitialSize = true
 
         self.allowsMagnification = false  // Pinch zoom goes via JS ctrlKey+wheel → pinchZoom bridge → setMagnification
-        self.pageZoom = 1.0   // Bug 2 fix: zoom is session-only, always start at 1.0
+        self.pageZoom = AppearancePreference.shared.zoomLevel
     }
 }
 

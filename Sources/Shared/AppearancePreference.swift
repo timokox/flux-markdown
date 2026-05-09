@@ -119,7 +119,7 @@ public class AppearancePreference: ObservableObject {
     public var baseFontSize: Double {
         get {
             let v = sharedStore.double(forKey: baseFontSizeKey)
-            return v == 0 ? 16 : v
+            return v == 0 ? 14 : v
         }
         set {
             objectWillChange.send()

@@ -349,8 +349,8 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         setupSourceButton()
         setupHelpButton()
         setupZoomInButton()
-        setupZoomOutButton()
         setupResetZoomButton()
+        setupZoomOutButton()
         setupReloadButton()
         setupVersionLabel()
         
@@ -750,7 +750,7 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
 
         NSLayoutConstraint.activate([
             button.topAnchor.constraint(equalTo: self.view.topAnchor, constant: 10),
-            button.trailingAnchor.constraint(equalTo: zoomInButton.leadingAnchor, constant: -8),
+            button.trailingAnchor.constraint(equalTo: resetZoomButton.leadingAnchor, constant: -8),
             button.widthAnchor.constraint(equalToConstant: 30),
             button.heightAnchor.constraint(equalToConstant: 30)
         ])
@@ -777,7 +777,7 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
 
         NSLayoutConstraint.activate([
             button.topAnchor.constraint(equalTo: self.view.topAnchor, constant: 10),
-            button.trailingAnchor.constraint(equalTo: zoomOutButton.leadingAnchor, constant: -8),
+            button.trailingAnchor.constraint(equalTo: zoomInButton.leadingAnchor, constant: -8),
             button.widthAnchor.constraint(equalToConstant: 30),
             button.heightAnchor.constraint(equalToConstant: 30)
         ])
@@ -805,7 +805,7 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
 
         NSLayoutConstraint.activate([
             button.topAnchor.constraint(equalTo: self.view.topAnchor, constant: 10),
-            button.trailingAnchor.constraint(equalTo: resetZoomButton.leadingAnchor, constant: -8),
+            button.trailingAnchor.constraint(equalTo: zoomOutButton.leadingAnchor, constant: -8),
             button.widthAnchor.constraint(equalToConstant: 30),
             button.heightAnchor.constraint(equalToConstant: 30)
         ])

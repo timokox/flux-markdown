@@ -2,29 +2,38 @@ import SwiftUI
 import AppKit
 
 struct WindowAccessor: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView {
-        let view = NSView()
-        DispatchQueue.main.async {
-            if let window = view.window {
-                // Restore saved frame if available
-                if let savedFrame = AppearancePreference.shared.hostWindowFrame {
-                    // Basic check to ensure valid frame dimensions
-                    if savedFrame.width > 0 && savedFrame.height > 0 {
-                        window.setFrame(savedFrame, display: true)
-                    }
+    func makeNSView(context: Context) -> WindowObservingView {
+        let view = WindowObservingView()
+        view.onWindowAttach = { window in
+            // Restore saved frame if available
+            if let savedFrame = AppearancePreference.shared.hostWindowFrame {
+                if savedFrame.width > 0 && savedFrame.height > 0 {
+                    window.setFrame(savedFrame, display: true)
                 }
-                
-                // Start observing changes
-                context.coordinator.monitor(window: window)
             }
+            // Start observing changes
+            context.coordinator.monitor(window: window)
         }
         return view
     }
     
-    func updateNSView(_ nsView: NSView, context: Context) {}
+    func updateNSView(_ nsView: WindowObservingView, context: Context) {}
     
     func makeCoordinator() -> Coordinator {
         Coordinator()
+    }
+    
+    /// Custom NSView that reliably detects when it's added to a window.
+    class WindowObservingView: NSView {
+        var onWindowAttach: ((NSWindow) -> Void)?
+        private var didAttach = false
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard !didAttach, let window = self.window else { return }
+            didAttach = true
+            onWindowAttach?(window)
+        }
     }
     
     class Coordinator: NSObject {
