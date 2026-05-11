@@ -409,6 +409,51 @@ struct EditorSettingsView: View {
                         .stroke(Color(NSColor.separatorColor), lineWidth: 1)
                 )
             }
+ 
+            // Finder Pane Font Size
+            VStack(alignment: .leading, spacing: 12) {
+                SettingsSectionHeader(
+                    title: NSLocalizedString("Finder Preview Font Size", comment: "Finder pane font size section title"),
+                    description: NSLocalizedString("Font size when previewing in Finder's column view", comment: "Finder pane font size section description")
+                )
+
+                VStack(spacing: 0) {
+                    HStack {
+                        Text(NSLocalizedString("Font Size", comment: "Font size label"))
+                            .font(.system(size: 13))
+                        Spacer()
+                        Text("\(Int(preference.finderPaneFontSize))px")
+                            .font(.system(size: 13, weight: .medium, design: .monospaced))
+                            .foregroundColor(.accentColor)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+
+                    Divider()
+
+                    HStack(spacing: 8) {
+                        Text("A").font(.system(size: 11)).foregroundColor(.secondary)
+                        Slider(
+                            value: Binding(
+                                get: { preference.finderPaneFontSize },
+                                set: { preference.finderPaneFontSize = $0 }
+                            ),
+                            in: 10...24,
+                            step: 1
+                        )
+                        .accentColor(.accentColor)
+                        Text("A").font(.system(size: 20)).foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                }
+                .background(Color(NSColor.controlBackgroundColor))
+                .cornerRadius(8)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color(NSColor.separatorColor), lineWidth: 1)
+                )
+            }
 
             // Code Theme
             VStack(alignment: .leading, spacing: 12) {
@@ -416,6 +461,7 @@ struct EditorSettingsView: View {
                     title: NSLocalizedString("Code Highlighting", comment: "Code theme section title"),
                     description: NSLocalizedString("Syntax highlighting theme for code blocks", comment: "Code theme section description")
                 )
+
 
                 VStack(spacing: 0) {
                     CodeThemeRow(name: NSLocalizedString("Default", comment: "Default code theme"),
