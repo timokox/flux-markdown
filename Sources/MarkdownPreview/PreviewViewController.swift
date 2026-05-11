@@ -362,17 +362,6 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         setupReloadButton()
         setupVersionLabel()
         
-        // Hide all toolbar UI by default; updateUIForPreviewMode() will show
-        // them if we're in spacebar mode once the hosting window is available.
-        themeButton?.isHidden = true
-        sourceButton?.isHidden = true
-        helpButton?.isHidden = true
-        zoomInButton?.isHidden = true
-        zoomOutButton?.isHidden = true
-        resetZoomButton?.isHidden = true
-        reloadButton?.isHidden = true
-        versionLabel?.isHidden = true
-        
         var bundleURL: URL?
         if let url = Bundle(for: type(of: self)).url(forResource: "index", withExtension: "html", subdirectory: "WebRenderer") {
             bundleURL = url
@@ -446,9 +435,7 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         super.viewDidAppear()
         logScreenEnvironment(context: "viewDidAppear")
         
-        if !hasDetectedPreviewMode {
-            detectPreviewModeIfNeeded()
-        }
+        detectPreviewModeIfNeeded()
         
         appearanceObservation = view.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, _ in
             guard let self = self else { return }
@@ -481,11 +468,20 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         } else {
             currentPreviewMode = .spacebar
         }
+        
+        let firstDetection = !hasDetectedPreviewMode
         hasDetectedPreviewMode = true
         os_log("🔵 Detected preview mode: %{public}@", log: logger, type: .default,
                currentPreviewMode == .spacebar ? "spacebar" : "finderPane")
         
         updateUIForPreviewMode()
+        
+        // If this is the first detection for this preview cycle and we're in
+        // Finder pane mode, the initial render used wrong defaults — re-render
+        // with correct context and font size.
+        if firstDetection && currentPreviewMode == .finderPane && isWebViewLoaded && pendingMarkdown != nil {
+            renderCurrentMode()
+        }
     }
     
     private func updateUIForPreviewMode() {
@@ -1119,9 +1115,8 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         DispatchQueue.main.async {
             self.logScreenEnvironment(context: "preparePreviewOfFile-ASYNC-START")
 
-            // Re-detect preview mode for each new file (view controller is reused).
+            // Reset detection flag; viewDidAppear will re-detect for this preview cycle.
             self.hasDetectedPreviewMode = false
-            self.detectPreviewModeIfNeeded()
 
             // Reset zoom to 1.0 on every new preview (Bug 2 fix: session-only zoom).
             // loadView() sets this once, but the view controller is reused across files.
