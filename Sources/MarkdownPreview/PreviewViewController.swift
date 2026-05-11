@@ -164,6 +164,13 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
     
     private let logger = OSLog(subsystem: "com.markdownquicklook.app", category: "MarkdownPreview")
     
+    enum PreviewMode {
+        case spacebar      // Full QuickLook panel (spacebar press)
+        case finderPane    // Finder column-view / preview pane
+    }
+    
+    private var currentPreviewMode: PreviewMode = .spacebar
+    
     private var appearanceObservation: NSKeyValueObservation?
     
     private let maxPreviewSizeBytes: UInt64 = 500 * 1024 // 500KB limit
@@ -427,6 +434,21 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         super.viewDidAppear()
         logScreenEnvironment(context: "viewDidAppear")
         
+        if let window = self.view.window {
+            let isQLPanel = window.isKind(of: NSClassFromString("QLPreviewPanel") ?? NSObject.self)
+            if isQLPanel {
+                currentPreviewMode = .spacebar
+            } else if !window.isKeyWindow && window.level == .normal {
+                currentPreviewMode = .finderPane
+            } else {
+                currentPreviewMode = .spacebar
+            }
+            os_log("🔵 Detected preview mode: %{public}@", log: logger, type: .default,
+                   currentPreviewMode == .spacebar ? "spacebar" : "finderPane")
+        }
+        
+        updateUIForPreviewMode()
+        
         appearanceObservation = view.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, _ in
             guard let self = self else { return }
             os_log("🌓 [effectiveAppearance KVO] System appearance changed", log: self.logger, type: .default)
@@ -436,8 +458,25 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         
         DispatchQueue.main.async { [weak self] in
             self?.view.window?.makeFirstResponder(self)
-            os_log("🔵 Attempted to make view controller first responder", 
+            os_log("🔵 Attempted to make view controller first responder",
                    log: self?.logger ?? .default, type: .default)
+        }
+    }
+    
+    private func updateUIForPreviewMode() {
+        let isFinderPane = (currentPreviewMode == .finderPane)
+        
+        themeButton?.isHidden = isFinderPane
+        sourceButton?.isHidden = isFinderPane
+        helpButton?.isHidden = isFinderPane
+        zoomInButton?.isHidden = isFinderPane
+        zoomOutButton?.isHidden = isFinderPane
+        resetZoomButton?.isHidden = isFinderPane
+        reloadButton?.isHidden = isFinderPane
+        versionLabel?.isHidden = isFinderPane
+        
+        if isWebViewLoaded && pendingMarkdown != nil {
+            renderCurrentMode()
         }
     }
     
@@ -1168,12 +1207,20 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         let capturedCollapseBlockquotes = AppearancePreference.shared.collapseBlockquotesByDefault
         let capturedShowLineNumbers = AppearancePreference.shared.showLineNumbers
         let capturedPrevMarkdown = self.prevMarkdown
+        let capturedPreviewMode = self.currentPreviewMode
+        let capturedFontSize: Double
+        if capturedPreviewMode == .finderPane {
+            capturedFontSize = AppearancePreference.shared.finderPaneFontSize
+        } else {
+            capturedFontSize = AppearancePreference.shared.baseFontSize
+        }
         self.prevMarkdown = nil
 
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self = self else { return }
             
-            var options: [String: Any] = ["theme": theme, "context": "quicklook", "uiLanguage": capturedUILanguage, "collapseBlockquotes": capturedCollapseBlockquotes, "showLineNumbers": capturedShowLineNumbers]
+            let contextValue = capturedPreviewMode == .finderPane ? "finder" : "quicklook"
+            var options: [String: Any] = ["theme": theme, "context": contextValue, "uiLanguage": capturedUILanguage, "collapseBlockquotes": capturedCollapseBlockquotes, "showLineNumbers": capturedShowLineNumbers, "fontSize": capturedFontSize]
             if let url = capturedURL {
                 options["baseUrl"] = url.deletingLastPathComponent().path
             }
