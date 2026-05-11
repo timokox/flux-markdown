@@ -136,6 +136,7 @@ struct MarkdownWebView: NSViewRepresentable {
         private var pollingTimer: Timer?
         private let pollingInterval: TimeInterval = 2.0
         private var hasAppliedInitialZoomReset: Bool = false
+        private let renderVersion = RenderVersionCounter()
 
         override init() {
             super.init()
@@ -414,6 +415,7 @@ struct MarkdownWebView: NSViewRepresentable {
             options["collapseBlockquotes"] = collapseBlockquotesByDefault
             options["showLineNumbers"] = showLineNumbers
             options["uiLanguage"] = AppearancePreference.shared.uiLanguage
+            options["renderVersion"] = renderVersion.next()
 
             if !previousContent.isEmpty && previousContent != content {
                 options["prevContent"] = previousContent

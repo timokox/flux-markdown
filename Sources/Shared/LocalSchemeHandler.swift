@@ -8,12 +8,7 @@ class LocalSchemeHandler: NSObject, WKURLSchemeHandler {
     func webView(_ webView: WKWebView, start urlSchemeTask: WKURLSchemeTask) {
         guard let url = urlSchemeTask.request.url else { return }
         
-        var filePath: String
-        if let host = url.host, !host.isEmpty {
-            filePath = "/" + host + url.path
-        } else {
-            filePath = url.path
-        }
+        let filePath = resolveFilePath(from: url)
         
         os_log("🔵 Start loading resource: %{public}@", log: logger, type: .debug, filePath)
 
@@ -50,7 +45,7 @@ class LocalSchemeHandler: NSObject, WKURLSchemeHandler {
         }
         
         if let data = resultData {
-            let response = URLResponse(url: url, mimeType: self.mimeType(for: url), expectedContentLength: data.count, textEncodingName: nil)
+            let response = buildResponse(for: url, data: data)
             urlSchemeTask.didReceive(response)
             urlSchemeTask.didReceive(data)
             urlSchemeTask.didFinish()
@@ -65,10 +60,44 @@ class LocalSchemeHandler: NSObject, WKURLSchemeHandler {
     func webView(_ webView: WKWebView, stop urlSchemeTask: WKURLSchemeTask) {
         os_log("Stopped loading: %{public}@", log: logger, type: .debug, urlSchemeTask.request.url?.path ?? "unknown")
     }
+
+    func resolveFilePath(from url: URL) -> String {
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        components?.query = nil
+
+        let cleanURL = components?.url ?? url
+
+        if let host = cleanURL.host, !host.isEmpty {
+            return "/" + host + cleanURL.path
+        }
+        return cleanURL.path
+    }
+
+    func buildResponse(for url: URL, data: Data) -> URLResponse {
+        let mime = mimeType(for: url)
+        let headers: [String: String] = [
+            "Content-Type": mime,
+            "Content-Length": "\(data.count)",
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+        ]
+
+        if let httpResponse = HTTPURLResponse(
+            url: url,
+            statusCode: 200,
+            httpVersion: "HTTP/1.1",
+            headerFields: headers
+        ) {
+            return httpResponse
+        }
+
+        return URLResponse(url: url, mimeType: mime, expectedContentLength: data.count, textEncodingName: nil)
+    }
     
     private func mimeType(for url: URL) -> String {
-        let pathExtension = url.pathExtension.lowercased()
-        switch pathExtension {
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        components?.query = nil
+        let cleanPath = components?.url?.pathExtension.lowercased() ?? url.pathExtension.lowercased()
+        switch cleanPath {
         case "png": return "image/png"
         case "jpg", "jpeg": return "image/jpeg"
         case "gif": return "image/gif"

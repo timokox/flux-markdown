@@ -153,6 +153,8 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
     // didEndLiveResize for the SAME window.
     private var sawLiveResizeStartForWindow: ObjectIdentifier?
     
+    private let renderVersion = RenderVersionCounter()
+
     // MARK: - File Monitoring
     private var fileMonitor: DispatchSourceFileSystemObject?
     private var monitoredFileDescriptor: Int32 = -1
@@ -1218,12 +1220,13 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
             ? AppearancePreference.shared.finderPaneFontSize
             : AppearancePreference.shared.baseFontSize
         self.prevMarkdown = nil
+        let capturedRenderVersion = renderVersion.next()
 
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self = self else { return }
             
             let contextValue = capturedPreviewMode == .compact ? "finder" : "quicklook"
-            var options: [String: Any] = ["theme": theme, "context": contextValue, "uiLanguage": capturedUILanguage, "collapseBlockquotes": capturedCollapseBlockquotes, "showLineNumbers": capturedShowLineNumbers, "fontSize": capturedFontSize]
+            var options: [String: Any] = ["theme": theme, "context": contextValue, "uiLanguage": capturedUILanguage, "collapseBlockquotes": capturedCollapseBlockquotes, "showLineNumbers": capturedShowLineNumbers, "fontSize": capturedFontSize, "renderVersion": capturedRenderVersion]
             if let url = capturedURL {
                 options["baseUrl"] = url.deletingLastPathComponent().path
             }

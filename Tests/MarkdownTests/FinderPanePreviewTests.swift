@@ -1,5 +1,4 @@
 import XCTest
-@testable import Markdown
 
 final class FinderPanePreviewTests: XCTestCase {
     

@@ -336,7 +336,8 @@ function buildMd(): MarkdownIt {
                 const absolutePath = cleanSrc.startsWith('/')
                     ? cleanSrc
                     : `${basePath}/${cleanSrc}`;
-                token.attrs[srcIndex][1] = `local-md://${absolutePath}`;
+                const cacheBust = env?.renderVersion != null ? `?v=${env.renderVersion}` : '';
+                token.attrs[srcIndex][1] = `local-md://${absolutePath}${cacheBust}`;
             }
         }
         return defaultImageRender(tokens, idx, options, env, self);
@@ -389,6 +390,7 @@ interface RenderOptions {
     collapseBlockquotes?: boolean;
     prevContent?: string;
     showLineNumbers?: boolean;
+    renderVersion?: number;
 }
 
 let currentContext: 'quicklook' | 'app' | 'finder' = 'app';
@@ -764,7 +766,7 @@ window.renderMarkdown = async function (text: string, options: RenderOptions = {
         const outline = extractOutline(md, renderBody);
         if (toc) toc.render(outline);
 
-        let html = md.render(renderBody, { baseUrl: options.baseUrl });
+        let html = md.render(renderBody, { baseUrl: options.baseUrl, renderVersion: options.renderVersion });
 
         if (options.imageData) {
             for (const [originalPath, dataUrl] of Object.entries(options.imageData)) {

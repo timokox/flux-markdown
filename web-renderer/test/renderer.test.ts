@@ -110,4 +110,65 @@ invalid syntax here
     expect(images?.[1].getAttribute('src')).toBe(networkUrl);
     expect(images?.[2].getAttribute('src')).toBe('local-md:///Users/me/docs/local.jpg');
   });
+
+  test('should append renderVersion as cache-busting query param to local-md:// image URLs', async () => {
+    const markdown = '![img](./pic.png)';
+
+    await window.renderMarkdown(markdown, { baseUrl: '/Users/me/docs', renderVersion: 42 });
+
+    const preview = document.getElementById('markdown-preview');
+    const img = preview?.querySelector('img');
+    expect(img).toBeTruthy();
+    expect(img?.getAttribute('src')).toBe('local-md:///Users/me/docs/pic.png?v=42');
+  });
+
+  test('should not append cache-busting param to network image URLs when renderVersion is set', async () => {
+    const networkUrl = 'https://example.com/image.png';
+    const markdown = `![Network](${networkUrl})`;
+
+    await window.renderMarkdown(markdown, { renderVersion: 5 });
+
+    const preview = document.getElementById('markdown-preview');
+    const img = preview?.querySelector('img');
+    expect(img).toBeTruthy();
+    expect(img?.getAttribute('src')).toBe(networkUrl);
+  });
+
+  test('should not append cache-busting param to base64 images when renderVersion is set', async () => {
+    const base64Data = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    const markdown = `![img](${base64Data})`;
+
+    await window.renderMarkdown(markdown, { renderVersion: 5 });
+
+    const preview = document.getElementById('markdown-preview');
+    const img = preview?.querySelector('img');
+    expect(img).toBeTruthy();
+    expect(img?.getAttribute('src')).toBe(base64Data);
+  });
+
+  test('should update cache-busting param when renderVersion changes between renders', async () => {
+    const markdown = '![img](./pic.png)';
+
+    await window.renderMarkdown(markdown, { baseUrl: '/Users/me/docs', renderVersion: 1 });
+    let preview = document.getElementById('markdown-preview');
+    let img = preview?.querySelector('img');
+    expect(img?.getAttribute('src')).toBe('local-md:///Users/me/docs/pic.png?v=1');
+
+    await window.renderMarkdown(markdown, { baseUrl: '/Users/me/docs', renderVersion: 2 });
+    preview = document.getElementById('markdown-preview');
+    img = preview?.querySelector('img');
+    expect(img?.getAttribute('src')).toBe('local-md:///Users/me/docs/pic.png?v=2');
+  });
+
+  test('should not append cache-busting param when renderVersion is not provided', async () => {
+    const markdown = '![img](./pic.png)';
+
+    await window.renderMarkdown(markdown, { baseUrl: '/Users/me/docs' });
+
+    const preview = document.getElementById('markdown-preview');
+    const img = preview?.querySelector('img');
+    expect(img).toBeTruthy();
+    // Without renderVersion, no ?v= param should be appended (backward compatible)
+    expect(img?.getAttribute('src')).toBe('local-md:///Users/me/docs/pic.png');
+  });
 });
