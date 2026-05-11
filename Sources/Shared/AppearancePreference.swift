@@ -115,6 +115,7 @@ public class AppearancePreference: ObservableObject {
     private let collapseBlockquotesByDefaultKey = "collapseBlockquotesByDefault"
     private let uiLanguageKey = "uiLanguage"
     private let showLineNumbersKey = "showLineNumbers"
+    private let finderPaneFontSizeKey = "finderPaneFontSize"
 
     public var baseFontSize: Double {
         get {
@@ -204,6 +205,18 @@ public class AppearancePreference: ObservableObject {
         set {
             objectWillChange.send()
             sharedStore.set(newValue, forKey: showLineNumbersKey)
+            scheduleSyncToSharedStore()
+        }
+    }
+
+    public var finderPaneFontSize: Double {
+        get {
+            let v = sharedStore.double(forKey: finderPaneFontSizeKey)
+            return v == 0 ? 13 : v
+        }
+        set {
+            objectWillChange.send()
+            sharedStore.set(newValue, forKey: finderPaneFontSizeKey)
             scheduleSyncToSharedStore()
         }
     }
