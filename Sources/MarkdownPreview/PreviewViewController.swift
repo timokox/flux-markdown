@@ -165,12 +165,13 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
     private let logger = OSLog(subsystem: "com.markdownquicklook.app", category: "MarkdownPreview")
     
     enum PreviewMode {
-        case spacebar      // Full QuickLook panel (spacebar press)
-        case finderPane    // Finder column-view / preview pane
+        case expanded   // Full QuickLook panel (spacebar press, large window)
+        case compact    // Finder column-view / preview pane (small embedded view)
     }
     
-    private var currentPreviewMode: PreviewMode = .spacebar
-    private var hasDetectedPreviewMode = false
+    private var currentPreviewMode: PreviewMode = .expanded
+    private static let compactWidthThreshold: CGFloat = 700
+    private static let compactHeightThreshold: CGFloat = 500
     
     private var appearanceObservation: NSKeyValueObservation?
     
@@ -413,6 +414,8 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
                size.width, size.height,
                isResizeTrackingEnabled ? "YES" : "NO")
         
+        updatePreviewMode()
+        
         guard isResizeTrackingEnabled else {
             os_log("📊 [viewDidLayout] SKIPPED - tracking disabled", log: logger, type: .default)
             return
@@ -435,7 +438,7 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         super.viewDidAppear()
         logScreenEnvironment(context: "viewDidAppear")
         
-        detectPreviewModeIfNeeded()
+        updatePreviewMode()
         
         appearanceObservation = view.observe(\.effectiveAppearance, options: [.new]) { [weak self] _, _ in
             guard let self = self else { return }
@@ -451,50 +454,33 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         }
     }
     
-    /// Detect preview mode from the hosting window. Safe to call multiple times;
-    /// only the first successful detection takes effect per preview cycle.
-    /// Called from both preparePreviewOfFile (earliest reliable point where window exists)
-    /// and viewDidAppear (fallback in case preparePreviewOfFile ran before window was available).
-    private func detectPreviewModeIfNeeded() {
-        guard let window = self.view.window else { return }
+    private func updatePreviewMode() {
+        let size = view.bounds.size
+        let previousMode = currentPreviewMode
+        currentPreviewMode = (size.width < Self.compactWidthThreshold || size.height < Self.compactHeightThreshold)
+            ? .compact : .expanded
         
-        // QLPreviewPanel is a public class used for spacebar QuickLook.
-        // Finder column-view embeds the extension in a non-key, normal-level window.
-        let isQLPanel = window.isKind(of: NSClassFromString("QLPreviewPanel") ?? NSObject.self)
-        if isQLPanel {
-            currentPreviewMode = .spacebar
-        } else if !window.isKeyWindow && window.level == .normal {
-            currentPreviewMode = .finderPane
-        } else {
-            currentPreviewMode = .spacebar
-        }
-        
-        let firstDetection = !hasDetectedPreviewMode
-        hasDetectedPreviewMode = true
-        os_log("🔵 Detected preview mode: %{public}@", log: logger, type: .default,
-               currentPreviewMode == .spacebar ? "spacebar" : "finderPane")
-        
-        updateUIForPreviewMode()
-        
-        // If this is the first detection for this preview cycle and we're in
-        // Finder pane mode, the initial render used wrong defaults — re-render
-        // with correct context and font size.
-        if firstDetection && currentPreviewMode == .finderPane && isWebViewLoaded && pendingMarkdown != nil {
-            renderCurrentMode()
+        if currentPreviewMode != previousMode {
+            os_log("🔵 Preview mode changed: %{public}@ (%.0fx%.0f)", log: logger, type: .default,
+                   currentPreviewMode == .expanded ? "expanded" : "compact", size.width, size.height)
+            updateUIForPreviewMode()
+            if isWebViewLoaded && pendingMarkdown != nil {
+                renderCurrentMode()
+            }
         }
     }
     
     private func updateUIForPreviewMode() {
-        let isFinderPane = (currentPreviewMode == .finderPane)
+        let isCompact = (currentPreviewMode == .compact)
         
-        themeButton?.isHidden = isFinderPane
-        sourceButton?.isHidden = isFinderPane
-        helpButton?.isHidden = isFinderPane
-        zoomInButton?.isHidden = isFinderPane
-        zoomOutButton?.isHidden = isFinderPane
-        resetZoomButton?.isHidden = isFinderPane
-        reloadButton?.isHidden = isFinderPane
-        versionLabel?.isHidden = isFinderPane
+        themeButton?.isHidden = isCompact
+        sourceButton?.isHidden = isCompact
+        helpButton?.isHidden = isCompact
+        zoomInButton?.isHidden = isCompact
+        zoomOutButton?.isHidden = isCompact
+        resetZoomButton?.isHidden = isCompact
+        reloadButton?.isHidden = isCompact
+        versionLabel?.isHidden = isCompact
     }
     
     public override func viewWillDisappear() {
@@ -1115,9 +1101,6 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         DispatchQueue.main.async {
             self.logScreenEnvironment(context: "preparePreviewOfFile-ASYNC-START")
 
-            // Reset detection flag; viewDidAppear will re-detect for this preview cycle.
-            self.hasDetectedPreviewMode = false
-
             // Reset zoom to 1.0 on every new preview (Bug 2 fix: session-only zoom).
             // loadView() sets this once, but the view controller is reused across files.
             self.webView.pageZoom = 1.0
@@ -1228,18 +1211,15 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         let capturedShowLineNumbers = AppearancePreference.shared.showLineNumbers
         let capturedPrevMarkdown = self.prevMarkdown
         let capturedPreviewMode = self.currentPreviewMode
-        let capturedFontSize: Double
-        if capturedPreviewMode == .finderPane {
-            capturedFontSize = AppearancePreference.shared.finderPaneFontSize
-        } else {
-            capturedFontSize = AppearancePreference.shared.baseFontSize
-        }
+        let capturedFontSize: Double = (capturedPreviewMode == .compact)
+            ? AppearancePreference.shared.finderPaneFontSize
+            : AppearancePreference.shared.baseFontSize
         self.prevMarkdown = nil
 
         Task.detached(priority: .userInitiated) { [weak self] in
             guard let self = self else { return }
             
-            let contextValue = capturedPreviewMode == .finderPane ? "finder" : "quicklook"
+            let contextValue = capturedPreviewMode == .compact ? "finder" : "quicklook"
             var options: [String: Any] = ["theme": theme, "context": contextValue, "uiLanguage": capturedUILanguage, "collapseBlockquotes": capturedCollapseBlockquotes, "showLineNumbers": capturedShowLineNumbers, "fontSize": capturedFontSize]
             if let url = capturedURL {
                 options["baseUrl"] = url.deletingLastPathComponent().path
