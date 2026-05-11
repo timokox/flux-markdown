@@ -1,4 +1,7 @@
 ## [Unreleased]
+_无待发布的变更_
+
+## [1.31.416] - 2026-05-12
 
 ### Added
 - **Two-Finger Pinch Zoom (Visual Scale)**: Double-finger pinch/spread on trackpad now performs smooth visual magnification (0.25× to 5.0×) via `WKWebView.setMagnification()` — scales entire page content without reflow, similar to photo zoom in Photos.app.
