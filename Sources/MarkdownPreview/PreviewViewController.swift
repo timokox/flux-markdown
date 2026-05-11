@@ -49,6 +49,7 @@ class InteractiveWebView: WKWebView {
             }
             let newZoom = max(0.5, min(3.0, self.pageZoom + (delta > 0 ? 0.05 : -0.05)))
             self.pageZoom = newZoom
+            AppearancePreference.shared.zoomLevel = newZoom
             os_log("🔵 Cmd+scroll zoom: %.2f", log: logger, type: .debug, newZoom)
             return
         }
@@ -974,16 +975,19 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
     
     @objc private func zoomIn() {
         webView.pageZoom = min(3.0, webView.pageZoom + 0.1)
+        AppearancePreference.shared.zoomLevel = webView.pageZoom
         os_log("🔵 pageZoom in: %.2f", log: logger, type: .debug, webView.pageZoom)
     }
     
     @objc private func zoomOut() {
         webView.pageZoom = max(0.5, webView.pageZoom - 0.1)
+        AppearancePreference.shared.zoomLevel = webView.pageZoom
         os_log("🔵 pageZoom out: %.2f", log: logger, type: .debug, webView.pageZoom)
     }
     
     @objc private func resetZoom() {
         webView.pageZoom = 1.0
+        AppearancePreference.shared.zoomLevel = 1.0
         os_log("🔵 pageZoom reset", log: logger, type: .debug)
     }
 
@@ -1101,10 +1105,9 @@ public class PreviewViewController: NSViewController, QLPreviewingController, WK
         DispatchQueue.main.async {
             self.logScreenEnvironment(context: "preparePreviewOfFile-ASYNC-START")
 
-            // Reset zoom to 1.0 on every new preview (Bug 2 fix: session-only zoom).
-            // loadView() sets this once, but the view controller is reused across files.
-            self.webView.pageZoom = 1.0
-            os_log("🔵 Reset pageZoom to 1.0 for new file preview", log: self.logger, type: .debug)
+            let savedZoom = AppearancePreference.shared.zoomLevel
+            self.webView.pageZoom = savedZoom
+            os_log("🔵 Restored pageZoom to %.2f for new file preview", log: self.logger, type: .debug, savedZoom)
 
             // Reset tracking to prevent capturing layout thrashing during display switching.
             // This is necessary because when QuickLook switches displays or reuses the view controller,
