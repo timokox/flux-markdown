@@ -9,8 +9,14 @@ module.exports = {
     '^vega-lite$': '<rootDir>/test/__mocks__/vega-lite.js',
     '^@hpcc-js/wasm-graphviz$': '<rootDir>/test/__mocks__/@hpcc-js/wasm-graphviz.js'
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!tex2typst)'
+  ],
   transform: {
     '^.+\\.tsx?$': ['ts-jest', {
+      tsconfig: 'tsconfig.json'
+    }],
+    'node_modules/tex2typst/.+\\.js$': ['ts-jest', {
       tsconfig: 'tsconfig.json'
     }]
   }
