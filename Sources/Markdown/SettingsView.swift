@@ -309,6 +309,13 @@ struct RenderingSettingsView: View {
                 )
                 Divider().padding(.leading, 52)
                 FeatureToggleRow(
+                    title: NSLocalizedString("Typst Math", comment: "Typst toggle title"),
+                    subtitle: NSLocalizedString("Typst math expressions in ```typst code blocks", comment: "Typst toggle subtitle"),
+                    icon: "x.squareroot",
+                    isOn: Binding(get: { preference.enableTypst }, set: { preference.enableTypst = $0 })
+                )
+                Divider().padding(.leading, 52)
+                FeatureToggleRow(
                     title: NSLocalizedString("Collapse Blockquotes by Default", comment: "Blockquote collapse toggle title"),
                     subtitle: NSLocalizedString("Collapse blockquote sections when opening a document", comment: "Blockquote collapse toggle subtitle"),
                     icon: "text.quote",

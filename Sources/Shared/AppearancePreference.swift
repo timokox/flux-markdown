@@ -112,6 +112,7 @@ public class AppearancePreference: ObservableObject {
     private let enableMermaidKey = "enableMermaid"
     private let enableKatexKey = "enableKatex"
     private let enableEmojiKey = "enableEmoji"
+    private let enableTypstKey = "enableTypst"
     private let collapseBlockquotesByDefaultKey = "collapseBlockquotesByDefault"
     private let uiLanguageKey = "uiLanguage"
     private let showLineNumbersKey = "showLineNumbers"
@@ -170,6 +171,18 @@ public class AppearancePreference: ObservableObject {
         set {
             objectWillChange.send()
             sharedStore.set(newValue, forKey: enableEmojiKey)
+            scheduleSyncToSharedStore()
+        }
+    }
+
+    public var enableTypst: Bool {
+        get {
+            guard sharedStore.object(forKey: enableTypstKey) != nil else { return true }
+            return sharedStore.bool(forKey: enableTypstKey)
+        }
+        set {
+            objectWillChange.send()
+            sharedStore.set(newValue, forKey: enableTypstKey)
             scheduleSyncToSharedStore()
         }
     }

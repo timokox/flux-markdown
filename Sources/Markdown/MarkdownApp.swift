@@ -83,6 +83,7 @@ struct MarkdownApp: App {
                     enableMermaid: preference.enableMermaid,
                     enableKatex: preference.enableKatex,
                     enableEmoji: preference.enableEmoji,
+                    enableTypst: preference.enableTypst,
                     codeHighlightTheme: preference.codeHighlightTheme,
                     collapseBlockquotesByDefault: preference.collapseBlockquotesByDefault,
                     showLineNumbers: preference.showLineNumbers

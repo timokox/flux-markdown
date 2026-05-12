@@ -132,6 +132,7 @@ final class CLIExporter: NSObject {
             "enableMermaid":      true,
             "enableKatex":        true,
             "enableEmoji":        true,
+            "enableTypst":        true,
             "uiLanguage":         "en",
         ]
         guard let optData = try? JSONSerialization.data(withJSONObject: options),

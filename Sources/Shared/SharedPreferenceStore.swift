@@ -99,6 +99,7 @@ public class SharedPreferenceStore {
                 "enableMermaid",
                 "enableKatex",
                 "enableEmoji",
+                "enableTypst",
                 "uiLanguage",
                 "collapseBlockquotesByDefault"
             ]
