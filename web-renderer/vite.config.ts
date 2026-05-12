@@ -15,6 +15,11 @@ export default defineConfig({
       output: {
         manualChunks: {
           mermaid: ['mermaid'],
+          'typst-wasm': [
+            '@myriaddreamin/typst.ts',
+            '@myriaddreamin/typst-ts-web-compiler',
+            '@myriaddreamin/typst-ts-renderer',
+          ],
         },
       },
     },
@@ -25,6 +30,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src'),
     },
   },
+  assetsInclude: ['**/*.wasm'],
   define: {
     'process.env': {},
   },

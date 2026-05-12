@@ -92,6 +92,7 @@ import './styles/blockquote-collapse.css';
 import './styles/diff-animations.css';
 import './styles/line-numbers.css';
 import './styles/finder-pane.css';
+import './styles/typst.css';
 
 import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js/lib/core';
@@ -286,6 +287,14 @@ function buildMd(): MarkdownIt {
         typographer: true,
         highlight: function (str: string, lang: string): string {
             const resolvedLang = resolveLanguage(lang);
+
+            // Typst math blocks — render as placeholder, post-processed async
+            if (lang === 'typst' || lang === 'typst-math') {
+                return '<div class="typst-placeholder" data-typst-source="' +
+                    str.replace(/"/g, '&quot;').replace(/\n/g, '&#10;') +
+                    '"><div class="typst-loading">Rendering Typst…</div></div>';
+            }
+
             if (resolvedLang && hljs.getLanguage(resolvedLang)) {
                 try {
                     return '<pre class="hljs"><code>' +
@@ -384,6 +393,7 @@ interface RenderOptions {
     codeHighlightTheme?: string;
     enableMermaid?: boolean;
     enableKatex?: boolean;
+    enableTypst?: boolean;
     enableEmoji?: boolean;
     context?: 'quicklook' | 'app' | 'finder';
     uiLanguage?: string;
@@ -742,6 +752,7 @@ window.renderMarkdown = async function (text: string, options: RenderOptions = {
         }
 
         const enableKatex = options.enableKatex !== false;
+        const enableTypst = options.enableTypst !== false;
         if (enableKatex && !katexEnabled && /\$[\s\S]+?\$|\$\$[\s\S]+?\$\$/.test(body)) {
             if (!katexPlugin) {
                 const m = await import('@iktakahiro/markdown-it-katex');
@@ -856,6 +867,36 @@ window.renderMarkdown = async function (text: string, options: RenderOptions = {
 
         await renderVegaDiagrams(outputDiv, currentTheme);
         await renderGraphvizDiagrams(outputDiv);
+
+        // Render Typst math blocks
+        if (enableTypst) {
+            const typstPlaceholders = outputDiv.querySelectorAll('.typst-placeholder');
+            if (typstPlaceholders.length > 0) {
+                try {
+                    const { renderTypstBlock } = await import('./typst-renderer');
+                    const context = options.context || 'quicklook';
+                    for (const placeholder of typstPlaceholders) {
+                        const source = placeholder.getAttribute('data-typst-source') || '';
+                        const decodedSource = source
+                            .replace(/&quot;/g, '"')
+                            .replace(/&#10;/g, '\n')
+                            .replace(/&amp;/g, '&');
+                        try {
+                            const rendered = await renderTypstBlock(decodedSource, context);
+                            placeholder.innerHTML = rendered;
+                        } catch (err) {
+                            logToSwift(`JS Typst render error: ${err}`);
+                            placeholder.innerHTML = `<div class="typst-math-block typst-error">
+                                <div class="typst-error-title">⚠️ Typst Render Error</div>
+                                <pre class="typst-error-source">${escapeHtml(decodedSource)}</pre>
+                            </div>`;
+                        }
+                    }
+                } catch (err) {
+                    logToSwift('JS Error loading typst-renderer: ' + err);
+                }
+            }
+        }
 
         setTimeout(() => {
             if (!mermaidInstance) {
