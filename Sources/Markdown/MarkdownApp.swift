@@ -98,95 +98,67 @@ struct MarkdownApp: App {
                 }
 
                 HStack(spacing: 8) {
-                    Button(action: {
+                    ToolbarIconButton(
+                        systemName: "arrow.clockwise",
+                        foregroundColor: Color(NSColor.labelColor),
+                        helpText: NSLocalizedString("Reload File (⌘R)", comment: "Reload file tooltip")
+                    ) {
                         NotificationCenter.default.post(name: .reloadFile, object: nil)
-                    }) {
-                        Image(systemName: "arrow.clockwise")
-                            .foregroundColor(Color(NSColor.labelColor))
-                            .frame(width: 30, height: 30)
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    .background(Color(NSColor.windowBackgroundColor).opacity(0.85))
-                    .clipShape(Circle())
-                    .help(NSLocalizedString("Reload File (⌘R)", comment: "Reload file tooltip"))
 
-                    Button(action: {
+                    ToolbarIconButton(
+                        systemName: "textformat.size.smaller",
+                        foregroundColor: Color(NSColor.labelColor),
+                        helpText: NSLocalizedString("Zoom Out", comment: "Zoom out tooltip")
+                    ) {
                         NotificationCenter.default.post(name: .zoomOut, object: nil)
-                    }) {
-                        Image(systemName: "textformat.size.smaller")
-                            .foregroundColor(Color(NSColor.labelColor))
-                            .frame(width: 30, height: 30)
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    .background(Color(NSColor.windowBackgroundColor).opacity(0.85))
-                    .clipShape(Circle())
-                    .help(NSLocalizedString("Zoom Out", comment: "Zoom out tooltip"))
 
-                    Button(action: {
+                    ToolbarIconButton(
+                        systemName: "arrow.uturn.backward",
+                        foregroundColor: Color(NSColor.labelColor),
+                        helpText: NSLocalizedString("Reset Zoom (⌘0)", comment: "Reset zoom tooltip")
+                    ) {
                         NotificationCenter.default.post(name: .resetZoom, object: nil)
-                    }) {
-                        Image(systemName: "arrow.uturn.backward")
-                            .foregroundColor(Color(NSColor.labelColor))
-                            .frame(width: 30, height: 30)
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    .background(Color(NSColor.windowBackgroundColor).opacity(0.85))
-                    .clipShape(Circle())
-                    .help(NSLocalizedString("Reset Zoom (⌘0)", comment: "Reset zoom tooltip"))
 
-                    Button(action: {
+                    ToolbarIconButton(
+                        systemName: "textformat.size.larger",
+                        foregroundColor: Color(NSColor.labelColor),
+                        helpText: NSLocalizedString("Zoom In", comment: "Zoom in tooltip")
+                    ) {
                         NotificationCenter.default.post(name: .zoomIn, object: nil)
-                    }) {
-                        Image(systemName: "textformat.size.larger")
-                            .foregroundColor(Color(NSColor.labelColor))
-                            .frame(width: 30, height: 30)
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    .background(Color(NSColor.windowBackgroundColor).opacity(0.85))
-                    .clipShape(Circle())
-                    .help(NSLocalizedString("Zoom In", comment: "Zoom in tooltip"))
 
-                    Button(action: {
+                    ToolbarIconButton(
+                        systemName: "questionmark.circle",
+                        foregroundColor: Color(NSColor.labelColor),
+                        helpText: NSLocalizedString("Show Help", comment: "Show help tooltip")
+                    ) {
                         NotificationCenter.default.post(name: .toggleHelp, object: nil)
-                    }) {
-                        Image(systemName: "questionmark.circle")
-                            .foregroundColor(Color(NSColor.labelColor))
-                            .frame(width: 30, height: 30)
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    .background(Color(NSColor.windowBackgroundColor).opacity(0.85))
-                    .clipShape(Circle())
-                    .help(NSLocalizedString("Show Help", comment: "Show help tooltip"))
 
-                    Button(action: {
+                    ToolbarIconButton(
+                        systemName: viewMode == .source ? "eye.fill" : "doc.text.fill",
+                        foregroundColor: viewMode == .source ? .blue : Color(NSColor.labelColor),
+                        helpText: viewMode == .source
+                            ? NSLocalizedString("Show Preview", comment: "Show preview tooltip")
+                            : NSLocalizedString("Show Source", comment: "Show source tooltip")
+                    ) {
                         viewMode = (viewMode == .preview) ? .source : .preview
-                    }) {
-                        Image(systemName: viewMode == .source ? "eye.fill" : "doc.text.fill")
-                            .foregroundColor(viewMode == .source ? .blue : Color(NSColor.labelColor))
-                            .frame(width: 30, height: 30)
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    .background(Color(NSColor.windowBackgroundColor).opacity(0.85))
-                    .clipShape(Circle())
-                    .help(viewMode == .source
-                          ? NSLocalizedString("Show Preview", comment: "Show preview tooltip")
-                          : NSLocalizedString("Show Source", comment: "Show source tooltip"))
 
-                    Button(action: {
+                    ToolbarIconButton(
+                        systemName: preference.currentMode == .light ? "sun.max.fill" : preference.currentMode == .dark ? "moon.fill" : "circle.lefthalf.filled",
+                        foregroundColor: preference.currentMode == .light ? .yellow : Color(NSColor.labelColor),
+                        helpText: NSLocalizedString("Toggle Theme (System / Light / Dark)", comment: "Theme toggle tooltip")
+                    ) {
                         switch preference.currentMode {
                         case .system: preference.currentMode = .light
                         case .light:  preference.currentMode = .dark
                         case .dark:   preference.currentMode = .system
                         }
-                    }) {
-                        Image(systemName: preference.currentMode == .light ? "sun.max.fill" : preference.currentMode == .dark ? "moon.fill" : "circle.lefthalf.filled")
-                            .foregroundColor(preference.currentMode == .light ? .yellow : Color(NSColor.labelColor))
-                            .frame(width: 30, height: 30)
                     }
-                    .buttonStyle(PlainButtonStyle())
-                    .background(Color(NSColor.windowBackgroundColor).opacity(0.85))
-                    .clipShape(Circle())
-                    .help(NSLocalizedString("Toggle Theme (System / Light / Dark)", comment: "Theme toggle tooltip"))
                 }
                 .padding([.top, .trailing], 10)
             }
@@ -311,6 +283,85 @@ struct MarkdownApp: App {
         Settings {
             SettingsView()
         }
+    }
+}
+
+private struct ToolbarIconButton: View {
+    let systemName: String
+    let foregroundColor: Color
+    let helpText: String
+    let action: () -> Void
+
+    var body: some View {
+        ToolbarIconButtonRepresentable(
+            systemName: systemName,
+            foregroundColor: foregroundColor,
+            helpText: helpText,
+            action: action
+        )
+        .frame(width: 30, height: 30)
+    }
+}
+
+private struct ToolbarIconButtonRepresentable: NSViewRepresentable {
+    let systemName: String
+    let foregroundColor: Color
+    let helpText: String
+    let action: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(action: action)
+    }
+
+    func makeNSView(context: Context) -> ToolbarIconNSButton {
+        let button = ToolbarIconNSButton(frame: NSRect(x: 0, y: 0, width: 30, height: 30))
+        button.target = context.coordinator
+        button.action = #selector(Coordinator.performAction)
+        button.setButtonType(.momentaryChange)
+        button.isBordered = false
+        button.translatesAutoresizingMaskIntoConstraints = false
+        button.imagePosition = .imageOnly
+        button.bezelStyle = .regularSquare
+        button.toolTip = helpText
+        button.setAccessibilityLabel(helpText)
+        return button
+    }
+
+    func updateNSView(_ button: ToolbarIconNSButton, context: Context) {
+        context.coordinator.action = action
+        button.toolTip = helpText
+        button.setAccessibilityLabel(helpText)
+        button.image = NSImage(systemSymbolName: systemName, accessibilityDescription: helpText)
+        button.contentTintColor = NSColor(foregroundColor)
+        button.needsDisplay = true
+    }
+
+    final class Coordinator: NSObject {
+        var action: () -> Void
+
+        init(action: @escaping () -> Void) {
+            self.action = action
+        }
+
+        @objc func performAction() {
+            action()
+        }
+    }
+}
+
+private final class ToolbarIconNSButton: NSButton {
+    override var intrinsicContentSize: NSSize {
+        NSSize(width: 30, height: 30)
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        bounds.contains(point) ? self : nil
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        NSColor.windowBackgroundColor.withAlphaComponent(0.85).setFill()
+        NSBezierPath(ovalIn: bounds).fill()
+        super.draw(dirtyRect)
     }
 }
 
