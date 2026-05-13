@@ -7,6 +7,23 @@
         <language>zh-CN</language>
 
         <item>
+            <title>Version 1.32.427</title>
+            <link>https://github.com/xykong/flux-markdown/releases/tag/v1.32.427</link>
+            <sparkle:version>427</sparkle:version>
+            <sparkle:shortVersionString>1.32.427</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>11.0</sparkle:minimumSystemVersion>
+            <pubDate>Wed, 13 May 2026 02:12:22 +0000</pubDate>
+            <enclosure
+                url="https://github.com/xykong/flux-markdown/releases/download/v1.32.427/FluxMarkdown.dmg"
+                sparkle:edSignature="nt06z+lEyCfM5yHku8PuW3QsiGdIJSsKYkx19uLa3uLnSqRCQ9fjr1uDC8O+B9Ftl44Fo7Q9EojaSfcKnORCAQ=="
+                length="10931476"
+                type="application/octet-stream" />
+            <description><![CDATA[
+                <h2>更新内容</h2><h3>Fixed</h3><ul><li><strong>App toolbar button hit areas</strong>: Fixed floating toolbar controls only responding when clicking directly on the icon/character. The toolbar now uses AppKit-backed 30×30 controls with bounds-based hit testing so clicks anywhere inside the circular button trigger the action.</li></ul><p><a href="https://github.com/xykong/flux-markdown/releases/tag/v1.32.427">查看完整更新日志</a></p>
+            ]]></description>
+        </item>
+        
+        <item>
             <title>Version 1.31.416</title>
             <link>https://github.com/xykong/flux-markdown/releases/tag/v1.31.416</link>
             <sparkle:version>416</sparkle:version>
