@@ -1,4 +1,7 @@
 ## [Unreleased]
+_无待发布的变更_
+
+## [1.32.427] - 2026-05-13
 
 ### Fixed
 - **App toolbar button hit areas**: Fixed floating toolbar controls only responding when clicking directly on the icon/character. The toolbar now uses AppKit-backed 30×30 controls with bounds-based hit testing so clicks anywhere inside the circular button trigger the action.
