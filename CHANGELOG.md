@@ -3,6 +3,12 @@ _无待发布的变更_
 
 ## [1.32.427] - 2026-05-13
 
+### Added
+- **Typst math rendering** (#36, thanks [@Killer545537](https://github.com/Killer545537)): Added support for `typst` and `typst-math` fenced code blocks in Markdown previews.
+  - QuickLook and Finder previews use lightweight `tex2typst` transpilation through the existing KaTeX renderer.
+  - The standalone app can use the lazy-loaded `typst.ts` WASM renderer for higher-fidelity SVG output, with transpilation fallback.
+  - Added an `enableTypst` preference, Settings toggle, renderer styles, WASM bundling configuration, and regression tests for fence detection and source encoding.
+
 ### Fixed
 - **App toolbar button hit areas**: Fixed floating toolbar controls only responding when clicking directly on the icon/character. The toolbar now uses AppKit-backed 30×30 controls with bounds-based hit testing so clicks anywhere inside the circular button trigger the action.
 
