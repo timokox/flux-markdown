@@ -52,6 +52,12 @@ final class FileExtensionTests: XCTestCase {
                       "test.livemd fixture must exist")
     }
 
+    func testFixtureExists_mdc() {
+        let url = fixturesURL.appendingPathComponent("test.mdc")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path),
+                      "test.mdc fixture must exist")
+    }
+
     func testFixtureExists_markdown() {
         let url = fixturesURL.appendingPathComponent("test.markdown")
         XCTAssertTrue(FileManager.default.fileExists(atPath: url.path),
@@ -212,6 +218,12 @@ final class FileExtensionTests: XCTestCase {
         XCTAssertEqual(processed, raw, ".qmd content must not be wrapped")
     }
 
+    func testNoWrapping_mdcExtension() {
+        let raw = "---\ndescription: rules\nglobs: \"*.tsx\"\n---\n\n# Rule"
+        let processed = applyContentPreprocessing(content: raw, fileExtension: "mdc")
+        XCTAssertEqual(processed, raw, ".mdc content must not be wrapped")
+    }
+
     // MARK: - UTI Declaration Tests (Info.plist)
 
     func testUTIDeclarations_appInfoPlistExists() {
@@ -298,6 +310,30 @@ final class FileExtensionTests: XCTestCase {
                       "Extension Info.plist QLSupportedContentTypes must include com.fluxmarkdown.mmd")
     }
 
+    func testUTIDeclarations_appPlistContainsMdcUTI() throws {
+        let plistURL = URL(fileURLWithPath: #file)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Sources/Markdown/Info.plist")
+        let plistContent = try String(contentsOf: plistURL, encoding: .utf8)
+        XCTAssertTrue(plistContent.contains("com.fluxmarkdown.mdc"),
+                      "App Info.plist must declare com.fluxmarkdown.mdc UTI")
+        XCTAssertTrue(plistContent.contains("<string>mdc</string>"),
+                      "App Info.plist must map .mdc extension to UTI")
+    }
+
+    func testUTIDeclarations_extensionPlistContainsMdcUTI() throws {
+        let plistURL = URL(fileURLWithPath: #file)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("Sources/MarkdownPreview/Info.plist")
+        let plistContent = try String(contentsOf: plistURL, encoding: .utf8)
+        XCTAssertTrue(plistContent.contains("com.fluxmarkdown.mdc"),
+                      "Extension Info.plist QLSupportedContentTypes must include com.fluxmarkdown.mdc")
+    }
+
     func testUTIDeclarations_extensionPlistContainsLivemdUTI() throws {
         let plistURL = URL(fileURLWithPath: #file)
             .deletingLastPathComponent()
@@ -324,6 +360,7 @@ final class FileExtensionTests: XCTestCase {
             "com.fluxmarkdown.rmd",
             "com.fluxmarkdown.qmd",
             "com.fluxmarkdown.mdoc",
+            "com.fluxmarkdown.mdc",
             "com.fluxmarkdown.mmd",
             "com.fluxmarkdown.livemd",
             "com.fluxmarkdown.markdown",
@@ -347,6 +384,7 @@ final class FileExtensionTests: XCTestCase {
         let supportedExtensions: [(filename: String, ext: String)] = [
             ("test-mermaid.mmd",          "mmd"),
             ("test.livemd",               "livemd"),
+            ("test.mdc",                  "mdc"),
             ("test.mdwn",                 "mdwn"),
             ("test.markdown",             "markdown"),
             ("test.mdown",                "mdown"),

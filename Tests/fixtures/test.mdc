@@ -1,0 +1,11 @@
+---
+description: Example AI rules file
+globs: "**/*.tsx"
+alwaysApply: false
+---
+
+# Component conventions
+
+- Use functional components with hooks.
+- Co-locate styles in a `.module.css` file next to the component.
+- Prefer composition over prop drilling.
